@@ -2,6 +2,8 @@
 /*******************/
 /*
 /* ToDo:もう閉講した科目は自動削除
+/* =>閉講した科目は登録しない。
+/* =>新しいデータを取得するまえに削除シークエンスをいれる。
 /*
 /*******************/
 require_once 'HTTP/Request.php';
@@ -66,12 +68,14 @@ class KamokuData extends AppModel {
 	);
 
 	/* 学部ごとによるデータ取得用メソッド */
-	public function updateByDeprt($dId) {
+	/* 引数にはDepartment.idを用いる */
+	public function updateByDeprt($id) {
 		$Department = ClassRegistry::init("Department");
-		$id = join("", Hash::extract($Department->find('first', array('conditions' => array('Department.post_id' => $dId))), "Department.id"));
+		$dId = join("", Hash::extract($Department->findById($id), "Department.post_id"));
 		$sIds = Hash::extract($Department->children($id), "{n}.Department.post_id");
 
 		$flag = true;
+		die;
 		foreach ($sIds as $sId) {
 			$rawData = $this->fetch($dId, $sId);
 			$data = $this->parseData($rawData, $dId, $sId);
@@ -153,10 +157,11 @@ class KamokuData extends AppModel {
 		$post = array('p_gakubu' => $dId, 'p_keya' => $sId);
 		
 		$http = $this->getHTTP();
-		$this->setPOST(&$http, array_merge($this->defaultQuery, $post));
+ 		$http = $this->setPOST($http, array_merge($this->defaultQuery, $post));
 		if (!PEAR::isError($http->sendRequest())) {
 			$body = $http->getResponseBody();
 		}
+
 		return $body;
 	}
 
@@ -180,6 +185,7 @@ class KamokuData extends AppModel {
 		$label = array();
 		foreach ($trs[0]->find('th') as $th) {
 			$str = $this->trim($th->plaintext);
+			
 			if ($str == "") continue;
 			$label[] = $str;
 		}
@@ -187,6 +193,7 @@ class KamokuData extends AppModel {
 		foreach ($trs as $tr) {
 			if (empty($tr->plaintext)) continue;
 			$tds = $tr->find('td');
+			
 			if (empty($tds) || count($tds) < 2) continue;
 
 			$tmp = array();
@@ -212,8 +219,11 @@ class KamokuData extends AppModel {
 			$item = array_merge($item, $this->parseParam($tmp));
 		}
 
+		$html->clear();
+		unset($html);
+		
 		/* メモリ解放 */
-		$this->clearDoms(array(&$html, &$trs, &$tds));
+		//$this->clearDoms(array(&$html, &$trs, &$tds));
 		return $item;
 	}
 
