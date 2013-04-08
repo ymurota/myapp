@@ -1,7 +1,6 @@
 <?php
 /*******************/
 /*
-/* ToDo:2度目のデータ取得時はすでにあるデータは取得しない。
 /* ToDo:もう閉講した科目は自動削除
 /*
 /*******************/
@@ -96,9 +95,10 @@ class KamokuData extends AppModel {
 	}
 
 	/* データベースにすでにあるものとの差分 */
-	/* 同じ酵素の配列じゃないとダメ。正確にはデータベースに登録するときのような形式 */
+	/* 同じ構造の配列じゃないとダメ。正確にはデータベースに登録するときのような形式 */
 	public function diff($yData, $dData) {
 		$fields = array_keys($yData[0]);
+		$ret = array();
 
 		/* 配列の各要素（配列）を文字列にして比較しやすくする */
 		foreach (compact("yData", "dData") as $name => $data) {
@@ -160,11 +160,22 @@ class KamokuData extends AppModel {
 		return $body;
 	}
 
+	/* SimpleHtmlDomsはめっちゃメモリを食うらしいので一括解放 */
+	private function clearDoms($dom) {
+		if (is_array($dom)) {
+			foreach ($dom as $k => $v) {
+				$this->clearDoms(&$dom[$k]);
+			}
+		}
+		if (method_exists($dom, "clear")) $dom->clear();
+		unset($dom);
+	}
+	
 	/* 早稲田からのレスポンスをデータベースに登録可能な形に整形する。 */
 	public function parseData($data, $dId, $sId) {
 		$html = str_get_html($data);
 		$trs = $html->find("table.ct-vh tr");
-
+		
 		$item = array();
 		$label = array();
 		foreach ($trs[0]->find('th') as $th) {
@@ -201,6 +212,8 @@ class KamokuData extends AppModel {
 			$item = array_merge($item, $this->parseParam($tmp));
 		}
 
+		/* メモリ解放 */
+		$this->clearDoms(array(&$html, &$trs, &$tds));
 		return $item;
 	}
 
