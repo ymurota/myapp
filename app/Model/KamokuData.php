@@ -75,7 +75,6 @@ class KamokuData extends AppModel {
 		$sIds = Hash::extract($Department->children($id), "{n}.Department.post_id");
 
 		$flag = true;
-		die;
 		foreach ($sIds as $sId) {
 			$rawData = $this->fetch($dId, $sId);
 			$data = $this->parseData($rawData, $dId, $sId);
