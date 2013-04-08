@@ -74,7 +74,6 @@ class KamokuData extends AppModel {
 		$flag = true;
 		foreach ($sIds as $sId) {
 			$rawData = $this->fetch($dId, $sId);
-			/* 処理中はクラスフィールドに学部、学科のidを保存しようかな？ */
 			$data = $this->parseData($rawData, $dId, $sId);
 
 			/* データベースのデータ取得 */
@@ -88,6 +87,7 @@ class KamokuData extends AppModel {
 			
 			 /* データベースとの差分のみ登録 */
 			$diff = $this->diff($data, $dData);
+			if (empty($diff)) continue;
 			if ($this->saveAll($diff) && $flag) continue;
 			$flag = false;
 		}
