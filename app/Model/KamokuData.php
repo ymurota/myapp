@@ -5,6 +5,8 @@
 /* =>閉講した科目は登録しない。
 /* =>新しいデータを取得するまえに削除シークエンスをいれる。
 /*
+/* ToDo:メモリリーク修正。
+/*
 /*******************/
 require_once 'HTTP/Request.php';
 App::import('Vendor', 'simplehtmldom/simple_html_dom');
@@ -19,7 +21,11 @@ class KamokuData extends AppModel {
 	private $http;
 
 	private $defaultQuery = array(
+		//現状、メモリリークして登録出来ない場合はp_numberを小さくし、
+		//p_pageを順繰りして細切れにデータを手動で取得
 		'p_number' => 1000,
+		//'p_page' => 3,
+		'pfrontPage' => 'now',
 		'keyword' => '',
 		'kamoku' => '',
 		'kyoin' => '',
@@ -33,7 +39,6 @@ class KamokuData extends AppModel {
 		'p_keyb' => '',
 		'p_searchb' => 'b',
 		'hidreset' => '',
-		'pfrontPage' => 'now',
 		'pchgFlg' => '',
 		'ControllerParameters' => 'JAA103SubCon',
 		'pOcw' => '',
@@ -76,25 +81,32 @@ class KamokuData extends AppModel {
 
 		$flag = true;
 		foreach ($sIds as $sId) {
-			$rawData = $this->fetch($dId, $sId);
-			$data = $this->parseData($rawData, $dId, $sId);
-
-			/* データベースのデータ取得 */
-			$dData = $this->find('all', array(
-					'conditions' => array('d_id' => $dId, 's_id' => $sId),
-					'fields' => array_keys($data[0])
-				));
-			$alias = $this->alias;
-			$dData = array_reduce($dData, function($memo, $item)use($alias){
-	$memo[] = $item[$alias]; return $memo;}, array());
-			
-			 /* データベースとの差分のみ登録 */
-			$diff = $this->diff($data, $dData);
-			if (empty($diff)) continue;
-			if ($this->saveAll($diff) && $flag) continue;
+			if ($this->update($dId, $sId) && $flag) continue;
 			$flag = false;
 		}
 		return $flag;
+	}
+
+	/* 学科ごとに取得。学部と学科のpost_idを用いる */
+	public function update($dId, $sId) {
+		$rawData = $this->fetch($dId, $sId);
+		$data = $this->parseData($rawData, $dId, $sId);
+
+		/* データベースのデータ取得 */
+		$dData = $this->find('all', array(
+				'conditions' => array('d_id' => $dId, 's_id' => $sId),
+				'fields' => array_keys($data[0])
+			));
+		$alias = $this->alias;
+		$dData = array_reduce($dData, function($memo, $item)use($alias){
+$memo[] = $item[$alias]; return $memo;}, array());
+			
+		/* データベースとの差分のみ登録 */
+		$diff = $this->diff($data, $dData);
+		
+		if (empty($diff)) return true;
+		if ($this->saveAll($diff)) return true;
+		return false;
 	}
 
 	/* データベースにすでにあるものとの差分 */
