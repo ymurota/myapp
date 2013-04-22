@@ -116,6 +116,7 @@ $memo[] = $item[$alias]; return $memo;}, array());
 		$ret = array();
 
 		/* 配列の各要素（配列）を文字列にして比較しやすくする */
+		/* ToDo キーも含めて文字列化したい */
 		foreach (compact("yData", "dData") as $name => $data) {
 			${$name} = array_reduce($data, function($memo, $item){
 	/* くっつける文字がデータに入っていないか注意 */
@@ -129,16 +130,10 @@ $memo[] = $item[$alias]; return $memo;}, array());
 			if (in_array($val, $dData)) unset($yData[$k]);
 		}
 
-		$ret = array_reduce($yData, function($memo, $item)use($fields){
+		return array_reduce($yData, function($memo, $item)use($fields){
  $item = explode('.', $item);
- if(count($fields) != count($item)){
-	 pr($fields); pr($item);
- }
  $memo[] = array_combine($fields, $item);
  return $memo;}, array());
-
-
-		return $ret;
 	}
 	   
 	/* HTTP通信系メソッド */
@@ -275,6 +270,7 @@ $memo[] = $item[$alias]; return $memo;}, array());
 				$tmp = array();
 
 				/* TODO: 展開の仕様、要検討！もっと抽象的（expandFieldsつかう！！）に展開する! */
+				/* 展開しやすいように、展開項目の仕様（形式）を統一する！ */
 				/* 教室で展開 */
 				foreach ($data as $k => $v) {
 					/* 突貫工事。今後別のとこで処理する */
